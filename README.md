@@ -51,12 +51,13 @@ tsp_solver/
 
 1. **Clone or navigate to the project directory**:
    ```bash
-   cd c:\Python_Projects\tsp_solver
+   git clone https://github.com/DevSeedorf/Traveling-Salesman-Problem-Optimization.git
    ```
 
-2. **Activate the virtual environment**:
+2. **Create and activate the virtual environment**:
    ```bash
    # Windows
+   python -m venv virt
    virt\Scripts\activate
    
    # Or using PowerShell
