@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TSP Visualization - Animated Path</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.0.0"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<style>
+    .historical-results {
+        display: flex;
+        gap: 2rem;
+        margin-top: 2rem;
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+
+    .aco-results, .abco-results {
+        flex: 1;
+        background: white;
+        border-radius: 10px;
+        padding: 20px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    }
+
+    .aco-header {
+        color: #8e44ad;
+        padding-bottom: 10px;
+        border-bottom: 2px dashed #8e44ad;
+    }
+
+    .abco-header {
+        color: #e67e22;
+        padding-bottom: 10px;
+        border-bottom: 2px dashed #e67e22;
+    }
+
+    .aco-item {
+        background-color: rgba(142, 68, 173, 0.05);
+        margin-bottom: 8px;
+        border-radius: 8px !important;
+        border-left: 4px solid #8e44ad;
+        transition: all 0.3s ease;
+    }
+
+    .abco-item {
+        background-color: rgba(230, 126, 34, 0.05);
+        margin-bottom: 8px;
+        border-radius: 8px !important;
+        border-left: 4px solid #e67e22;
+        transition: all 0.3s ease;
+    }
+
+    .aco-item:hover {
+        background-color: rgba(142, 68, 173, 0.1);
+        transform: translateX(5px);
+    }
+
+    .abco-item:hover {
+        background-color: rgba(230, 126, 34, 0.1);
+        transform: translateX(5px);
+    }
+
+    .route-text {
+        font-weight: 500;
+        color: #333;
+    }
+
+    .distance-badge {
+        color: #7f8c8d;
+        font-weight: 400;
+        font-size: 0.9em;
+    }
+
+    .btn-view {
+        background: linear-gradient(135deg, #3498db, #2980b9);
+        color: white;
+        border: none;
+        border-radius: 20px;
+        padding: 5px 15px;
+        font-size: 0.85em;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    }
+
+    .btn-view:hover {
+        background: linear-gradient(135deg, #2980b9, #3498db);
+        transform: translateY(-2px);
+        box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+    }
+
+    .bg-ant {
+        background: linear-gradient(135deg, #8e44ad, #9b59b6);
+        color: #FFFFFF;
+    }
+
+    .bg-bee {
+        background: linear-gradient(135deg, #e67e22, #d35400);
+        color: #FFFFFF;
+    }
+
+    .badge {
+        font-size: 0.7em;
+        padding: 5px 10px;
+        border-radius: 15px;
+        vertical-align: middle;
+    }
+
+    .btn-danger {
+        transition: all 0.3s ease;
+    }
+
+    .btn-danger:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 8px rgba(220, 53, 69, 0.3);
+    }
+
+    .modal-header.bg-danger {
+        background-color: #dc3545 !important;
+    }
+
+    .badge.bg-info {
+        font-size: 0.9em;
+        padding: 8px 12px;
+        border-radius: 20px;
+    }
+</style>
+
+<body class="bg-gray-100 flex flex-col items-center justify-center min-h-screen p-6">
+
+    <h2 class="text-2xl font-bold text-gray-800 mb-4">🚀 Traveling Salesman Problem - Route Animation</h2>
+
+    <div class="flex gap-4 mb-6">
+        <button onclick="loadTSP('aco')" class="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition">Solve with ACO</button>
+        <button onclick="loadTSP('abco')" class="bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700 transition">Solve with ABCO</button>
+    </div>
+
+    <div class="bg-white shadow-lg rounded-lg p-6 w-150">
+        <h3 id="algo-name" class="text-lg font-semibold text-gray-700 mb-2"></h3>
+        <p class="text-gray-600"><strong>Route:</strong> <span id="route-display"></span></p>
+        <p class="text-gray-600"><strong>Total Distance:</strong> <span id="distance-display"></span> km</p>
+    </div>
+
+    <div class="chart-container mt-6 bg-white p-4 rounded-lg shadow-lg">
+        <canvas id="tspChart" class="w-120 h-100"></canvas>
+    </div>
+
+    <script>
+        let tspChart;
+        let animationInterval;
+
+        async function loadTSP(algorithm) {
+            const apiUrl = algorithm === 'aco' ? "/tsp/aco/api/" : "/tsp/abco/api/";
+            const response = await fetch(apiUrl);
+            const data = await response.json();
+
+            document.getElementById("algo-name").textContent = data.algorithm;
+            document.getElementById("route-display").textContent = data.route.join(" → ");
+            document.getElementById("distance-display").textContent = data.distance;
+
+            animateRoute(data.steps, data.route);
+        }
+function animateRoute(stepwiseRoutes, cityNames) {
+    const ctx = document.getElementById('tspChart').getContext('2d');
+    let stepIndex = 0;
+
+    if (tspChart) {
+        tspChart.destroy();
+    }
+
+    // Initialize with all city points
+    const allCities = stepwiseRoutes[stepwiseRoutes.length - 1].map((coord, idx) => ({
+        x: coord[0],
+        y: coord[1],
+        name: cityNames[idx]
+    }));
+
+    tspChart = new Chart(ctx, {
+        type: "scatter",
+        data: {
+            datasets: [
+                {
+                    label: "Cities",
+                    data: allCities,
+                    backgroundColor: "rgba(255, 99, 132, 0.8)",
+                    pointRadius: 8,
+                    pointHoverRadius: 12,
+                    pointBorderWidth: 2,
+                    pointBorderColor: "white"
+                },
+                {
+                    label: "Route",
+                    data: [],
+                    borderColor: "rgba(54, 162, 235, 0.8)",
+                    borderWidth: 3,
+                    fill: false,
+                    showLine: true,
+                    pointRadius: 0,  // No points for the route line
+                    pointBackgroundColor: "rgba(54, 162, 235, 0.8)"
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                x: { 
+                    min: 0, 
+                    max: 10,
+                    title: {
+                        display: true,
+                        text: 'X Coordinate'
+                    }
+                },
+                y: { 
+                    min: 0, 
+                    max: 10,
+                    title: {
+                        display: true,
+                        text: 'Y Coordinate'
+                    }
+                }
+            },
+            plugins: {
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            return context.datasetIndex === 0 ? context.raw?.name : '';
+                        }
+                    }
+                },
+                legend: {
+                    display: true,
+                    position: 'top'
+                }
+            }
+        },
+        plugins: [{
+            id: 'cityLabels',
+            afterDatasetsDraw(chart) {
+                const ctx = chart.ctx;
+                ctx.save();
+                ctx.font = 'bold 12px Arial';
+                ctx.fillStyle = '#333';
+                ctx.textAlign = 'center';
+                
+                // Only draw labels for cities dataset (datasetIndex 0)
+                chart.data.datasets[0].data.forEach((point, index) => {
+                    const x = chart.scales.x.getPixelForValue(point.x);
+                    const y = chart.scales.y.getPixelForValue(point.y);
+                    ctx.fillText(chart.data.datasets[0].data[index].name, x, y - 15); // Position above point
+                });
+                ctx.restore();
+            }
+        }]
+    });
+
+    // Animate the route
+    clearInterval(animationInterval);
+    animationInterval = setInterval(() => {
+        if (stepIndex < stepwiseRoutes.length) {
+            const currentRoute = stepwiseRoutes[stepIndex];
+            tspChart.data.datasets[1].data = currentRoute.map((coord, idx) => ({
+                x: coord[0],
+                y: coord[1]
+            }));
+            tspChart.update();
+            stepIndex++;
+        } else {
+            clearInterval(animationInterval);
+        }
+    }, 400);
+}
+    </script>
+
+<div class="historical-results">
+    <div class="aco-results">
+        <h3 class="aco-header">Recent ACO Results <span class="badge bg-ant">Ant Colony</span></h3>
+        <ul class="list-group">
+            {% for result in aco_results %}
+            <li class="list-group-item d-flex justify-content-between align-items-center aco-item">
+                <span class="route-text">
+                    <i class="fas fa-route me-2" style="color: #8e44ad;"></i>
+                    {{ result.route|join:" → " }} 
+                    <span class="distance-badge">- {{ result.distance }} km</span>
+                </span>
+                <a href="{% url 'tsp_result_detail' result.id %}" class="btn btn-sm btn-view">
+                    <i class="fas fa-eye me-1"></i> View Details
+                </a>
+            </li>
+            {% endfor %}
+        </ul>
+    </div>
+    
+    <div class="abco-results">
+        <h3 class="abco-header">Recent ABCO Results <span class="badge bg-bee">Bee Colony</span></h3>
+        <ul class="list-group">
+            {% for result in abco_results %}
+            <li class="list-group-item d-flex justify-content-between align-items-center abco-item">
+                <span class="route-text">
+                    <i class="fas fa-route me-2" style="color: #e67e22;"></i>
+                    {{ result.route|join:" → " }} 
+                    <span class="distance-badge">- {{ result.distance }} km</span>
+                </span>
+                <a href="{% url 'tsp_result_detail' result.id %}" class="btn btn-sm btn-view">
+                    <i class="fas fa-eye me-1"></i> View Details
+                </a>
+            </li>
+            {% endfor %}
+        </ul>
+    </div>
+</div>
+
+
+<form action="{% url 'clear_tsp_results' %}" method="POST" class="mt-4">
+    {% csrf_token %}
+    <button type="submit" class="btn btn-danger">
+        <i class="fas fa-trash-alt me-1"></i> Delete All Results
+    </button>
+</form>
+
+</body>
+</html>

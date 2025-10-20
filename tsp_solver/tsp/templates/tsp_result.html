@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TSP Result</title>
+</head>
+<body>
+    <h2>{{ algorithm }} - Best Route</h2>
+    <p>
+        {{ route|join:" -> " }} -> {{ route.0 }}
+    </p>
+    <p>Total Distance: {{ distance }} km</p>
+
+    <h3>Route Visualization</h3>
+    <img src="{{ plot_uri }}" alt="TSP Route">
+
+    <br><br>
+    <a href="/tsp/aco/">Solve with ACO</a> |
+    <a href="/tsp/abco/">Solve with ABCO</a>
+</body>
+</html>

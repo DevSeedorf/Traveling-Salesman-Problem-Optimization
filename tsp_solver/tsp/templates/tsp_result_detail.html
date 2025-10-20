@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TSP Result Details</title>
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Leaflet CSS for maps -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.3/dist/leaflet.css"/>
+    <style>
+        body {
+            padding: 20px;
+            font-family: Arial, sans-serif;
+        }
+        .result-container {
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 20px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+            border-radius: 8px;
+        }
+        .result-header {
+            border-bottom: 1px solid #eee;
+            padding-bottom: 15px;
+            margin-bottom: 20px;
+        }
+        .route-path {
+            background-color: #f8f9fa;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 20px 0;
+            font-size: 1.1em;
+        }
+        #tsp-map {
+            height: 500px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            margin: 20px 0;
+        }
+        .info-item {
+            margin-bottom: 10px;
+        }
+        .info-label {
+            font-weight: bold;
+            display: inline-block;
+            width: 150px;
+        }
+    </style>
+</head>
+<body>
+    <div class="result-container">
+        <div class="result-header">
+            <h1>TSP Route Result Details</h1>
+            <a href="/tsp/" class="btn btn-primary">Back to Home</a>
+        </div>
+
+        <div class="result-info">
+            <h2>{{ result.get_algorithm_display }} Solution</h2>
+            
+            <div class="info-item">
+                <span class="info-label">Total Distance:</span>
+                <span>{{ result.distance }} km</span>
+            </div>
+            
+            <div class="info-item">
+                <span class="info-label">Date Calculated:</span>
+                <span>{{ result.created_at }}</span>
+            </div>
+            
+            <div class="info-item">
+                <span class="info-label">Execution Time:</span>
+                <span>{{ result.execution_time|floatformat:2 }} seconds</span>
+            </div>
+            
+            <h3 class="mt-4">Route Path</h3>
+            <div class="route-path">
+                {{ result.route|join:" → " }}
+            </div>
+        </div>
+
+        <!-- <div class="visualization mt-4">
+            <h3>Route Visualization</h3>
+            <div id="tsp-map"></div>
+        </div> -->
+    </div>
+
+    <!-- Leaflet JS for maps -->
+    <script src="https://unpkg.com/leaflet@1.9.3/dist/leaflet.js"></script>
+    <script>
+    // document.addEventListener('DOMContentLoaded', function() {
+    //     try {
+    //         // Safely parse the Django template variables
+    //         const routeCoordinates = JSON.parse('{{ route_coordinates|escapejs }}');
+    //         const routeNames = JSON.parse('{{ result.route|escapejs }}');
+            
+    //         // Validate coordinates
+    //         if (!Array.isArray(routeCoordinates) {
+    //             throw new Error('Invalid route coordinates data');
+    //         }
+    //         if (routeCoordinates.length === 0) {
+    //             throw new Error('No coordinates provided');
+    //         }
+            
+    //         // Initialize the map
+    //         const map = L.map('tsp-map').setView([8, 5], 6);
+            
+    //         // Add tile layer
+    //         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    //             attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+    //             maxZoom: 18,
+    //         }).addTo(map);
+            
+    //         // Process coordinates - ensure they're in [lat, lng] format
+    //         const processedCoords = routeCoordinates.map(coord => {
+    //             if (Array.isArray(coord) && coord.length >= 2) {
+    //                 return [coord[0], coord[1]];
+    //             }
+    //             console.error('Invalid coordinate:', coord);
+    //             return [0, 0]; // Fallback
+    //         });
+            
+    //         // Create the main route line
+    //         const routeLine = L.polyline(processedCoords, {
+    //             color: '#3498db',
+    //             weight: 4,
+    //             opacity: 0.7,
+    //             dashArray: '5, 5'
+    //         }).addTo(map);
+            
+    //         // Add markers for each point
+    //         processedCoords.forEach((coord, index) => {
+    //             if (coord[0] !== 0 || coord[1] !== 0) { // Skip invalid coords
+    //                 L.marker(coord).addTo(map)
+    //                     .bindPopup(`<b>Stop ${index + 1}:</b> ${routeNames[index] || 'Unknown'}`)
+    //                     .openPopup();
+    //             }
+    //         });
+            
+    //         // Fit bounds to show entire route
+    //         if (processedCoords.length > 0) {
+    //             map.fitBounds(routeLine.getBounds());
+    //         }
+            
+    //         // Animation line
+    //         const animatedLine = L.polyline([], {
+    //             color: '#e74c3c',
+    //             weight: 4
+    //         }).addTo(map);
+            
+    //         // Animate the route drawing
+    //         let currentSegment = 0;
+    //         function animateRoute() {
+    //             if (currentSegment < processedCoords.length) {
+    //                 animatedLine.addLatLng(processedCoords[currentSegment]);
+    //                 currentSegment++;
+    //                 setTimeout(animateRoute, 500);
+    //             }
+    //         }
+            
+    //         setTimeout(animateRoute, 1000);
+            
+    //     } catch (error) {
+    //         console.error('Map initialization error:', error);
+    //         document.getElementById('tsp-map').innerHTML = `
+    //             <div style="color: red; padding: 20px; text-align: center;">
+    //                 <h3>Error loading map visualization</h3>
+    //                 <p>${error.message}</p>
+    //                 <p>Route coordinates: ${JSON.stringify(routeCoordinates)}</p>
+    //             </div>
+    //         `;
+    //     }
+    // });
+</script>
+
+    <!-- Bootstrap JS Bundle with Popper -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
